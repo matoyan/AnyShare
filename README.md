@@ -1,9 +1,13 @@
 AnyShare
 =========================
 File and Link sharing app in Musubi.
+
 - Receive implicit intent from any other apps and post it into Musubi feed.
+
 - Send implicit intent to select files and post it into Musubi feed.
+
 - Send implicit intent to view files in Musubi feed.
+
 - Download large file from other phones directly (like p2p manner)
 
 To try out the application, please download [Action Bar Sherlock][1] as the action bar library and build them together.
