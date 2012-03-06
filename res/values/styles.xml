@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    
+    <!-- Theme -->
+    <style name="Theme.SherlockCustom" parent="@style/Theme.Sherlock.Light">
+    	<item name="abBackground">#ffcccccc</item>
+    	<item name="abIcon">@drawable/ic_launcher</item>
+    </style>
+
+    <!-- View -->
+    <style name="ViewTitle">
+        <item name="android:textStyle">bold</item>
+        <item name="android:textSize">@dimen/text_size_large</item>
+        <item name="android:textColor">@color/body_text_1</item>
+    </style>
+    <style name="ViewText">
+        <item name="android:textSize">@dimen/text_size_medium</item>
+        <item name="android:textColor">@color/body_text_2</item>
+    </style>
+    
+    <!-- List -->
+    <style name="ListItemTitle">
+        <item name="android:textStyle">bold</item>
+        <item name="android:textSize">@dimen/text_size_medium</item>
+        <item name="android:textColor">@color/body_text_1</item>
+    </style>
+
+    <style name="ListItemSubtitle">
+        <item name="android:textSize">@dimen/text_size_small</item>
+        <item name="android:textColor">@color/body_text_3</item>
+    </style>
+
+    <style name="ListItemContainerBase">
+        <item name="android:minHeight">?android:attr/listPreferredItemHeight</item>
+    </style>
+
+    <!-- a simple list item is one whose container and content are the same view -->
+    <style name="SimpleListItem" parent="style/ListItemContainerBase">
+        <item name="android:paddingLeft">10dp</item>
+        <item name="android:paddingRight">10dp</item>
+        <item name="android:paddingTop">8dp</item>
+        <item name="android:paddingBottom">8dp</item>
+    </style>
+
+    <!-- used for more complex list items, e.g. those with stars aligned to the top-right -->
+
+    <style name="ListItemContainer" parent="style/ListItemContainerBase" />
+
+    <style name="ListItemContent">
+        <item name="android:paddingLeft">10dp</item>
+        <item name="android:paddingRight">10dp</item>
+        <item name="android:paddingTop">8dp</item>
+        <item name="android:paddingBottom">8dp</item>
+    </style>
+    
+    <style name="SettingTitle">
+        <item name="android:textSize">@dimen/text_size_xlarge</item>
+        <item name="android:textColor">@color/body_text_1</item>
+    </style>
+    
+</resources>

@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Copyright (C) 2012 Kazuya (Kaz) Yokoyama <kazuya.yokoyama@gmail.com>
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+         http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+-->
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+
+    <!-- Label -->
+    <string name="app_name">AnyShare</string>
+    <string name="label_sample">AnyShare</string>
+    <string name="label_view">AnyShare Viewer</string>
+    <string name="label_post">AnyShare Post</string>
+    <string name="label_itemlist">Shared Items In Group</string>
+    
+    <!-- Menu -->
+    <string name="menu_settings">Settings</string>
+    <string name="menu_postfeed">Post to Group</string>
+    <string name="menu_viewdetail">View Detail</string>
+    <string name="menu_add">Add File</string>
+    <string name="menu_refresh">Refresh List</string>
+    
+    <!-- Sample -->
+    <string name="message">This is sample activity.</string>
+
+    <!-- Dialog -->
+    <string name="market_dialog_title">AnyShare</string>
+    <string name="market_dialog_text">Musubi App is required to use AnyShare.\nDownload Musubi now?</string>
+    <string name="market_dialog_yes">Yes</string>
+    <string name="market_dialog_no">No</string>
+    
+    <string name="musubi_dialog_title">AnyShare</string>
+    <string name="musubi_dialog_text">To share data, please launch AnyShare on Musubi just once.\nLaunch Musubi now?</string>
+    <string name="musubi_dialog_yes">Yes</string>
+    <string name="musubi_dialog_no">No</string>
+    
+    <string name="corral_dialog_title">Download Required</string>
+    <string name="corral_dialog_text">Download the file right now?</string>
+    <string name="corral_dialog_yes">Yes</string>
+    <string name="corral_dialog_no">No</string>
+    
+    <string name="cfailed_dialog_title">Failed To Download</string>
+    <string name="cfailed_dialog_text">Download it later from other phones in background?</string>
+    <string name="cfailed_dialog_yes">Yes</string>
+    <string name="cfailed_dialog_no">No</string>
+    
+    <string name="appnotfound_dialog_title">Application Not Found</string>
+    <string name="appnotfound_dialog_text">Please find the viewer application in Android Market to view this file.</string>
+    <string name="appnotfound_dialog_yes">OK</string>
+    <string name="appnotfound_dialog_no">No</string>
+    
+    <string name="appnotfound2_dialog_title">Application Not Found</string>
+    <string name="appnotfound2_dialog_text">Viewer application is required to view this file.\nDownload from Market now?</string>
+    <string name="appnotfound2_dialog_yes">Yes</string>
+    <string name="appnotfound2_dialog_no">No</string>
+    
+    <string name="refresh_dialog_title">Refresh List</string>
+    <string name="refresh_dialog_text">Are you sure you want to refresh item list?</string>
+    <string name="refresh_dialog_yes">Yes</string>
+    <string name="refresh_dialog_no">No</string>
+    
+    
+    <!-- Others -->
+    <string name="home_loading">Loading...</string>
+    <string name="view_downloading">Downloading...</string>
+    <string name="title">Title</string>
+    <string name="comment">Comment</string>
+    <string name="empty"></string>
+    <string name="sharedata">Data To Share</string>
+    
+</resources>
