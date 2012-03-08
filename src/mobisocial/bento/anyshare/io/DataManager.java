@@ -1,6 +1,7 @@
 package mobisocial.bento.anyshare.io;
 
 import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -8,16 +9,30 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.HttpURLConnection;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
+import java.net.URL;
+import java.security.InvalidAlgorithmParameterException;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.Enumeration;
 
+import javax.crypto.BadPaddingException;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
+import javax.crypto.ShortBufferException;
+
 import mobisocial.bento.anyshare.R;
 import mobisocial.bento.anyshare.ui.FeedItemListItem;
+import mobisocial.bento.anyshare.ui.ViewActivity;
+import mobisocial.bento.anyshare.ui.ViewActivity.PrepareForCorral;
 import mobisocial.bento.anyshare.util.BitmapHelper;
+import mobisocial.bento.anyshare.util.CryptUtil;
 import mobisocial.bento.anyshare.util.DBHelper;
 import mobisocial.bento.anyshare.util.UpnpController;
 import mobisocial.socialkit.musubi.DbFeed;
@@ -28,6 +43,7 @@ import mobisocial.socialkit.obj.MemObj;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import com.actionbarsherlock.R.string;
 import com.google.gson.Gson;
 
 import android.content.ContentResolver;
@@ -65,10 +81,11 @@ public class DataManager {
 	public static final String STATE = "state";
 	public static final String B64JPGTHUMB = "b64jpgthumb";
 
+	private static final String SERVER_URL = "http://mtpxy.com/musubi/"; // need to change
     public static final long MY_ID = -666;
+	public static final int RAW_MAXBYTE = 200000;
 
     private static DataManager sInstance = null;
-	private static JSONObject sState = null;
 	private Musubi mMusubi = null;
 
 	private UpnpController upnp = null;
@@ -100,7 +117,6 @@ public class DataManager {
 
 	public void init(Musubi musubi, Context context) {
 		mMusubi = musubi;
-		sState = null;
         wanip = null;
         wanport = null;
         lanip = null;
@@ -111,22 +127,8 @@ public class DataManager {
         }
 	}
 	
-	public void updateFromObj(DbObj obj){
-		if (obj != null && obj.getJson() != null) {
-			if (obj.getJson().has(STATE)){
-				sState = obj.getJson().optJSONObject(STATE);
-			}
-		}
-	}
-	public void updateFromApp(DbObj app){
-		if(app != null){
-			updateFromObj(app.getSubfeed().getLatestObj());
-		}
-	}
-	
 	public void fin() {
 //		mMusubi = null;
-		sState = null;
 		sInstance = null;
         wanip = null;
         wanport = null;
@@ -173,7 +175,7 @@ public class DataManager {
 			for (int i = 0; i < c.getCount(); i++) {
 				DbObj dbObj = mMusubi.objForCursor(c);
 				if(dbObj.getType().equals(TYPE_APP_STATE)){
-					Log.d(TAG, "newhash:"+dbObj.getHash());
+//					Log.d(TAG, "newhash:"+dbObj.getHash());
 					dbh.storeAppobjInDatabase(dbObj,context);
 				}else if(dbObj.getType().equals(TYPE_PICTURE)){
 					dbh.storePicobjInDatabase(dbObj,context);
@@ -290,14 +292,9 @@ public class DataManager {
 			int yScale = (options.outHeight + targetSize - 1) / targetSize;
 			int scale = xScale < yScale ? xScale : yScale;
 			
-			int size = 2000000;
-			FileInputStream file = new FileInputStream(imageUri.getPath());
-			try {
-				size = file.available();
-				file.close();
-				Log.d(TAG, "Filesize:"+String.valueOf(size));
-			} catch (IOException e1) {
-				Log.d(TAG, "Failed to get filesize.");
+			int size = getFileSize(imageUri);
+			if(size <= 0){
+				size = 2000000;
 			}
 		
 			options.inJustDecodeBounds = false;
@@ -354,6 +351,17 @@ public class DataManager {
 		}
 	}
 
+	private int getFileSize (Uri uri){
+		int size = 0;
+		try {
+			FileInputStream file = new FileInputStream(uri.getPath());
+			size = file.available();
+			file.close();
+			return size;
+		} catch (IOException e1) {
+			return 0;
+		}
+	}
 
 	// TODO use BitmapHelper Class
     static float rotationForImage(Context context, Uri uri) {
@@ -477,7 +485,7 @@ public class DataManager {
 
 				localuri = Uri.fromFile(tmpfile);
 				postdata.localUri = localuri.toString();
-				if(size<200000){
+				if(size<RAW_MAXBYTE){
 					input = context.getContentResolver().openInputStream(localuri);
 					ByteArrayOutputStream baos = new ByteArrayOutputStream();
 					while (-1 != (n = input.read(buffer))) {
@@ -486,6 +494,8 @@ public class DataManager {
 					input.close();
 					baos.close();
 			        rawdata = baos.toByteArray();
+				}else{
+					postdata.key = uploadToCloud(localuri, context);
 				}
 				postdata.filesize = size;
 			} catch (FileNotFoundException e) {
@@ -501,8 +511,6 @@ public class DataManager {
 		JSONObject b;
 		try {
 			String objtype = postdata.objtype;
-			postdata.thumb = null; // erace binary thumb data
-			postdata.attach = null; // erace attach data
 			postdata.objtype = null;
 			postdata.lanip = getLocalIpAddress();
 			postdata.wanip = wanip;
@@ -821,4 +829,227 @@ public class DataManager {
 		}
 		return iconid;
     }
+    
+    // ---------------------------------------------------------------------------------
+    // Corral things
+    // ---------------------------------------------------------------------------------
+    
+    synchronized String uploadToCloud(Uri uri, Context context) {
+    	try {
+        	EncRslt rslt = encryptData(uri, context);
+        	if(rslt == null){
+        		return null;
+        	}
+			InputStream is = context.getContentResolver().openInputStream(rslt.uri);
+			int hash = rslt.key.hashCode();
+			Uri posturl = Uri.parse(SERVER_URL+"post.php?hash="+hash);
+			if(pushFileOverNW(is, posturl)){
+				return rslt.key;
+			}else{
+				return null;
+			}
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+    		return null;
+		}
+	}
+    private boolean pushFileOverNW(InputStream in, Uri posturi){
+    	try {
+    		Log.e(TAG, "connecting to "+posturi.toString());
+    		URL url = new URL(posturi.toString());
+    		HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+    		conn.setDoOutput(true);
+    		conn.setDoInput(true);
+    		conn.setUseCaches(false);
+            conn.setRequestMethod("POST");
+            conn.setRequestProperty("Content-Length", String.valueOf(in.available()));
+
+            DataOutputStream out = new DataOutputStream(conn.getOutputStream());  
+    		byte[] buf = new byte[1024];
+    		int len;
+    		while ((len = in.read(buf)) > 0) {
+    			out.write(buf, 0, len);
+            }
+    		final int responseCode = conn.getResponseCode();
+			conn.disconnect();
+    		if(responseCode != HttpURLConnection.HTTP_OK){
+    			Log.e(TAG,"invalid response code, "+responseCode);
+    			return false;
+    		}
+			return true;
+			
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		return false;
+    }
+
+    class EncRslt {
+    	Uri uri;
+    	String key;
+    }
+	private EncRslt encryptData(Uri uri, Context context){
+		try {
+			EncRslt rslt = new EncRslt();
+			CryptUtil cu = new CryptUtil();
+			cu.InitCiphers();
+			rslt.key = cu.getKey();
+			InputStream is = context.getContentResolver().openInputStream(uri);
+			
+			File dst = getFileForCrypt(String.valueOf(rslt.key.hashCode()), context);
+			
+			FileOutputStream fos = new FileOutputStream(dst);
+			cu.Encrypt(is, fos);
+			rslt.uri = Uri.fromFile(dst);
+			is.close();
+			fos.close();
+			return rslt;
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+			return null;
+		} catch (NoSuchAlgorithmException e) {
+			e.printStackTrace();
+			return null;
+		} catch (ShortBufferException e) {
+			e.printStackTrace();
+			return null;
+		} catch (IllegalBlockSizeException e) {
+			e.printStackTrace();
+			return null;
+		} catch (BadPaddingException e) {
+			e.printStackTrace();
+			return null;
+		} catch (IOException e) {
+			e.printStackTrace();
+			return null;
+		} catch (InvalidKeyException e) {
+			e.printStackTrace();
+			return null;
+		} catch (NoSuchProviderException e) {
+			e.printStackTrace();
+			return null;
+		} catch (NoSuchPaddingException e) {
+			e.printStackTrace();
+			return null;
+		} catch (InvalidAlgorithmParameterException e) {
+			e.printStackTrace();
+			return null;
+		}
+	}
+	private File getFileForCrypt(String hash, Context context){
+		File externalCacheDir = new File(new File(new File(new File(Environment.getExternalStorageDirectory(), "Android"), "data"), context.getPackageName()), "cypher");
+		externalCacheDir.mkdirs();
+		
+		// clear items
+		String[] files = externalCacheDir.list();
+		for(int i=0; i<files.length;i++){
+			new File(externalCacheDir, files[i]).delete();
+		}
+		
+		// add new file
+		File dst = new File(externalCacheDir, hash+".tmp");
+		if(dst.exists()){
+			dst.delete();
+		}
+		dst.deleteOnExit(); // delete encrypted file later
+		return dst;
+	}
+	public int downloadFromCloud(Uri dst, String key, PrepareForCorral prg, Context context){
+		try {
+			int hash = key.hashCode();
+			Uri geturl = Uri.parse(SERVER_URL+"get.php?hash="+hash);
+			Uri src = getFileOverNW(geturl, String.valueOf(hash), prg, context);
+			
+			// progress dialog update
+			prg.setProgress(50);
+
+			if(decryptData(src, dst, key, prg)){
+				prg.setProgress(99);
+				return getFileSize(dst);
+			}else{
+				new File(src.toString()).delete();
+				new File(dst.toString()).delete();
+				return 0;
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
+			new File(dst.toString()).delete();
+			return 0;
+		}
+	}
+    private Uri getFileOverNW(Uri remoteUri, String hash, PrepareForCorral prg, Context context)
+            throws IOException {
+        try {
+            URL url = new URL(remoteUri.toString());
+
+            File localFile = getFileForCrypt(hash, context);
+            if (!localFile.exists()) {
+                localFile.getParentFile().mkdirs();
+                try {
+                    InputStream is = url.openConnection().getInputStream();
+                    OutputStream out = new FileOutputStream(localFile);
+                    byte[] buf = new byte[1024];
+                    int len;
+                    int size = 0;
+                    while ((len = is.read(buf)) > 0) {
+                        out.write(buf, 0, len);
+            			// progress dialog update
+                        size += len;
+            			prg.setProgress((int) Math.floor(50 * size/prg.filesize));
+                    }
+                    out.close();
+                } catch (IOException e) {
+                    if (localFile.exists()) {
+                        localFile.delete();
+                    }
+                    throw e;
+                }
+            }
+            return Uri.fromFile(localFile);
+        } catch (Exception e) {
+            throw new IOException(e);
+        }
+    }
+	private boolean decryptData(Uri src, Uri dst, String key, PrepareForCorral prg){
+		try {
+			CryptUtil cu = new CryptUtil(key);
+			cu.InitCiphers();
+			FileInputStream fis;
+			fis = new FileInputStream(new File(src.getPath()));
+			FileOutputStream fos = new FileOutputStream(new File(dst.getPath()));
+			cu.Decrypt(fis, fos, prg);
+			return true;
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+			return false;
+		} catch (ShortBufferException e) {
+			e.printStackTrace();
+			return false;
+		} catch (IllegalBlockSizeException e) {
+			e.printStackTrace();
+			return false;
+		} catch (BadPaddingException e) {
+			e.printStackTrace();
+			return false;
+		} catch (IOException e) {
+			e.printStackTrace();
+			return false;
+		} catch (InvalidKeyException e) {
+			e.printStackTrace();
+			return false;
+		} catch (NoSuchAlgorithmException e) {
+			e.printStackTrace();
+			return false;
+		} catch (NoSuchProviderException e) {
+			e.printStackTrace();
+			return false;
+		} catch (NoSuchPaddingException e) {
+			e.printStackTrace();
+			return false;
+		} catch (InvalidAlgorithmParameterException e) {
+			e.printStackTrace();
+			return false;
+		}
+	}
+
 }

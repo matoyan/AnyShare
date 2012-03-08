@@ -27,10 +27,14 @@ import mobisocial.socialkit.musubi.FeedObserver;
 import mobisocial.socialkit.musubi.Musubi;
 import android.app.AlertDialog;
 import android.app.ProgressDialog;
+import android.content.ActivityNotFoundException;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageManager;
+import android.content.pm.PackageManager.NameNotFoundException;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -48,6 +52,8 @@ public class FeedItemListActivity extends FragmentActivity {
 	private static final int REQUEST_PICK = 1;
 
 	private static final String TAG = "FeedAlbumListActivity";
+
+	protected static final int REQUEST_MARKET = 1;
 
 	private DataManager mManager = DataManager.getInstance();
 	private Musubi mMusubi;
@@ -128,7 +134,7 @@ public class FeedItemListActivity extends FragmentActivity {
             case android.R.id.home:
                 return true;
             case R.id.menu_add:
-            	goSelection();
+            	prepareSelection();
                 return true;
             case R.id.menu_refresh:
             	askRefresh();
@@ -150,12 +156,56 @@ public class FeedItemListActivity extends FragmentActivity {
 		}
 	};
 	
+	private boolean isFileManagerInstalled(){
+        PackageManager pm = this.getPackageManager();
+        String[] packages = {"com.rhmsoft.fm", "com.metago.astro", "com.estrongs.android.pop", 
+        		"com.agilesoftresource", "com.agilesoftresource", "com.smartwho.SmartFileManager"};
+        for(int i=0;i<packages.length;i++){
+	        try {
+	            pm.getApplicationInfo(packages[i], 0);
+	            return true;
+	        } catch (NameNotFoundException e) {
+	        	// check next
+	        }
+        }
+        return false;
+	}
+
+	private void prepareSelection(){
+		if(isFileManagerInstalled()){
+			goSelection();
+		}else{
+			askDownloadFM();
+		}
+	}
+	
 	private void goSelection(){
 		Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
 		intent.setType("*/*");
 		intent.addCategory(Intent.CATEGORY_OPENABLE);
 		startActivityForResult(intent, REQUEST_PICK);
 	}
+	
+	private void askDownloadFM(){
+		new AlertDialog.Builder(this)
+		.setTitle(R.string.dlfm_dialog_title)
+		.setMessage(R.string.dlfm_dialog_text)
+		.setIcon(android.R.drawable.ic_dialog_info)
+		.setCancelable(true)
+		.setPositiveButton(getResources().getString(R.string.dlfm_dialog_yes), new DialogInterface.OnClickListener() {
+			public void onClick(DialogInterface dialog, int whichButton) {
+				goMarket("com.rhmsoft.fm");
+			}
+		})
+		.setNegativeButton(getResources().getString(R.string.refresh_dialog_no),
+				new DialogInterface.OnClickListener() {
+					public void onClick(DialogInterface dialog, int whichButton) {
+						goSelection();
+					}
+				})
+		.create().show();
+	}
+
 
 	private void askRefresh(){
 		new AlertDialog.Builder(this)
@@ -225,4 +275,13 @@ public class FeedItemListActivity extends FragmentActivity {
 		}
 	}
 	
+    private void goMarket(final String app_id){
+		try{
+	    	Uri uri = Uri.parse("market://details?id="+app_id);
+	    	Intent intent = new Intent(Intent.ACTION_VIEW, uri);
+	    	startActivityForResult(intent, REQUEST_MARKET);
+		}catch(ActivityNotFoundException anfe){
+			Log.e(TAG, "Application Not Found.");
+		}
+    }
 }

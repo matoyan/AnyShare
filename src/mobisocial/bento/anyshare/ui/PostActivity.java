@@ -1,8 +1,5 @@
 package mobisocial.bento.anyshare.ui;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.InputStreamReader;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -11,9 +8,9 @@ import mobisocial.bento.anyshare.io.Postdata;
 import mobisocial.bento.anyshare.service.ProxyService;
 import mobisocial.socialkit.musubi.Musubi;
 import android.app.AlertDialog;
+import android.app.ProgressDialog;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
-import android.content.ContentResolver;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -21,6 +18,7 @@ import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.database.Cursor;
 import android.net.Uri;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.support.v4.app.ActionBar;
@@ -31,7 +29,6 @@ import android.text.SpannableString;
 import android.util.Log;
 import android.view.View;
 import android.view.View.OnClickListener;
-import android.view.WindowManager;
 import android.webkit.MimeTypeMap;
 import android.widget.EditText;
 import android.widget.RadioButton;
@@ -65,37 +62,6 @@ public class PostActivity extends FragmentActivity {
 		// set defaults for logo & home up
 		actionBar.setDisplayHomeAsUpEnabled(false);
 		actionBar.setDisplayUseLogoEnabled(false);
-		
-		// setup content
-		if (mIntent.getAction().equals(Intent.ACTION_SEND) && false) {
-	         Uri uri = mIntent.getData();
-	         Log.e(TAG, "Action:"+mIntent.getAction());
-	         Log.e(TAG, "Type:"+mIntent.getType());
-	         Log.e(TAG, String.valueOf(uri));
-
-	         if ("file".equals(uri.getScheme())) {
-	             File file = new File(uri.getPath());
-	             // TODO file post 
-                 Log.d(TAG, "File:"+String.valueOf(uri.getPath()));
-	         } else if 
-	             ("content".equals(uri.getScheme())){
-	             try {
-	                 StringBuffer buf = new StringBuffer();
-	                 ContentResolver cr = getContentResolver();
-	             
-	                 BufferedReader reader = new BufferedReader(
-	                     new InputStreamReader(cr.openInputStream(uri)));
-	                 
-	                 String line = null;
-	                 while((line = reader.readLine()) != null) {
-	                     buf.append(line).append("\n");
-	                 }
-	                 reader.close();
-	                 Log.d(TAG, "Content:"+String.valueOf(buf));
-	             } catch (Exception e) {
-	             }
-	         }
-	     }
 		
 		// proxy service connection & get musubi obj
 		Intent intent = new Intent(this, ProxyService.class);
@@ -145,9 +111,7 @@ public class PostActivity extends FragmentActivity {
         		TextView text = (EditText) findViewById(R.id.post_message);
             	postdata.title = title.getText().toString().trim();
             	postdata.text  = text.getText().toString().trim();
-            	mManager.postUpdate(postdata,this);
-            	showToast("Post finished.", true);
-            	finish();
+				new PostData(postdata, mContext).execute();
                 return true;
             default:
                 return super.onOptionsItemSelected(item);
@@ -363,4 +327,47 @@ public class PostActivity extends FragmentActivity {
     }
 
 
+	private class PostData extends AsyncTask<Void, Void, Boolean> {
+		private DataManager mManager = DataManager.getInstance();
+		private Context mContext;
+		private ProgressDialog mProgressDialog = null;
+		private Postdata postdata;
+		
+		public PostData(Postdata pd, Context context) {
+			mContext = context;
+			postdata = pd;
+		}
+
+		@Override
+		protected void onPreExecute() {
+			// show progress dialog
+			mProgressDialog = new ProgressDialog(mContext);
+			mProgressDialog.setMessage(mContext.getString(R.string.post_sending));
+			mProgressDialog.setProgressStyle(ProgressDialog.STYLE_SPINNER);
+			mProgressDialog.setIndeterminate(false);
+			mProgressDialog.setCancelable(false);
+			mProgressDialog.setMax(100);
+			mProgressDialog.show();
+		}
+
+		@Override
+		protected Boolean doInBackground(Void... params) {
+        	mManager.postUpdate(postdata, mContext);
+        	showToast("Post finished.", true);
+        	finish();
+        	return true;
+		}
+
+		@Override
+		protected void onPostExecute(Boolean result) {
+			try {
+				if (mProgressDialog != null && mProgressDialog.isShowing()) {
+					mProgressDialog.dismiss();
+					mProgressDialog = null;
+				}
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
+	}
 }

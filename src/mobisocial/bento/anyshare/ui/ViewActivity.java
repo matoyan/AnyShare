@@ -9,20 +9,16 @@ import java.io.OutputStream;
 
 import mobisocial.bento.anyshare.io.DataManager;
 import mobisocial.bento.anyshare.io.Postdata;
-import mobisocial.bento.anyshare.service.ProxyService;
 import mobisocial.bento.anyshare.util.CorralClient;
 import mobisocial.socialkit.musubi.DbObj;
 import mobisocial.socialkit.musubi.Musubi;
-import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.ProgressDialog;
 import android.content.ActivityNotFoundException;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.content.DialogInterface.OnCancelListener;
-import android.content.pm.ActivityInfo;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -178,15 +174,18 @@ public class ViewActivity extends FragmentActivity {
 		}
 	}
 	
-	private class PrepareForCorral extends AsyncTask<Void, Integer, Boolean> implements OnCancelListener {
+	public class PrepareForCorral extends AsyncTask<Void, Integer, Boolean> implements OnCancelListener {
 		private DataManager mManager = DataManager.getInstance();
 		private Context mContext;
 		private File cachefile;
 		private ProgressDialog mProgressDialog = null;
+		public int filesize;
 		
 		public PrepareForCorral(Context context, File file) {
 			mContext = context;
 			cachefile = file;
+	        filesize = postdata.filesize;
+
 		}
 
 		@Override
@@ -207,59 +206,84 @@ public class ViewActivity extends FragmentActivity {
 			DbObj obj = mManager.getContextObj();
 	        Uri fileUri;
 
-	        try {
-		        if(postdata.wanip!=null){
-		        	fileUri = mCorralClient.fetchContent(obj, mManager.getMusubi(), postdata.wanip);
-		        	if (fileUri == null) {
-		                Log.d(TAG, "IP:"+String.valueOf(postdata.lanip));
-		            	fileUri = mCorralClient.fetchContent(obj, mManager.getMusubi(), postdata.lanip);
-		            	if (fileUri == null) {
-		            		Log.d(TAG, "Failed to get file.");
-		        			corralFailed(cachefile);
-		            		return false;
-		            	}
-		        	}
-		        }else{
-		            Log.d(TAG, "IP:"+String.valueOf(postdata.lanip));
-		        	fileUri = mCorralClient.fetchContent(obj, mManager.getMusubi(), postdata.lanip);
-		        }
-		        if(fileUri == null){
-		    		Log.d(TAG, "Failed to get file.");
-					corralFailed(cachefile);
-					return false;
-		        }
-		        Log.d(TAG, "Opening file " + fileUri);
-		        
-				OutputStream output = new FileOutputStream(cachefile);
-				InputStream input = getContentResolver().openInputStream(fileUri);
-				int DEFAULT_BUFFER_SIZE = 1024 * 4;
-				byte[] buffer = new byte[DEFAULT_BUFFER_SIZE];
-				int n = 0;
-				int size = 0;
-				while (-1 != (n = input.read(buffer))) {
-				  output.write(buffer, 0, n);
-				  size+=n;
-				  publishProgress((int) Math.floor(100 * size/postdata.filesize));
+	        if(postdata.wanip!=null){
+	        	try {
+					fileUri = mCorralClient.fetchContent(obj, mManager.getMusubi(), postdata.wanip);
+				} catch (IOException e) {
+					e.printStackTrace();
+					fileUri = null;
 				}
-				input.close();
-				output.close();
+	        	if (fileUri == null) {
+	                Log.d(TAG, "IP:"+String.valueOf(postdata.lanip));
+	            	try {
+						fileUri = mCorralClient.fetchContent(obj, mManager.getMusubi(), postdata.lanip);
+					} catch (IOException e) {
+						e.printStackTrace();
+						fileUri = null;
+					}
+	            	if (fileUri == null) {
+	            		Log.d(TAG, "Failed to get file.");
+	        			corralFailed(cachefile);
+	            		return false;
+	            	}
+	        	}
+	        }else{
+	            Log.d(TAG, "IP:"+String.valueOf(postdata.lanip));
+	        	try {
+					fileUri = mCorralClient.fetchContent(obj, mManager.getMusubi(), postdata.lanip);
+				} catch (IOException e) {
+					e.printStackTrace();
+					fileUri = null;
+				}
+	        }
+	        if(fileUri == null){
+	    		Log.d(TAG, "Failed to get file.");
+	    		int size = mManager.downloadFromCloud(Uri.fromFile(cachefile), postdata.key, this, mContext);
 				if(size>0 && size==postdata.filesize){
 					viewfile(cachefile);
 				}else{
-					cachefile.delete();
 					corralFailed(cachefile);
 					return false;
 				}
+    			return true;
+	        }else{
+		        Log.d(TAG, "Opening file by corral" + fileUri);
+		        
+				try {
+					OutputStream output;
+					output = new FileOutputStream(cachefile);
+					InputStream input = getContentResolver().openInputStream(fileUri);
+					int DEFAULT_BUFFER_SIZE = 1024 * 4;
+					byte[] buffer = new byte[DEFAULT_BUFFER_SIZE];
+					int n = 0;
+					int size = 0;
+					while (-1 != (n = input.read(buffer))) {
+					  output.write(buffer, 0, n);
+					  size+=n;
+					  publishProgress((int) Math.floor(100 * size/postdata.filesize));
+					}
+					input.close();
+					output.close();
+					if(size>0 && size==postdata.filesize){
+						viewfile(cachefile);
+					}else{
+						corralFailed(cachefile);
+						return false;
+					}
+				} catch (IOException e) {
+					e.printStackTrace();
+					corralFailed(cachefile);
+					return false;
+				}
+	        }
 
-			} catch (IOException e) {
-				e.printStackTrace();
-				cachefile.delete();
-				corralFailed(cachefile);
-				return false;
-			}
 			return true;
 		}
 
+		public void setProgress(int prg){
+			publishProgress(prg);
+		}
+		
 		@Override
 		protected void onProgressUpdate(Integer... values) {
 			mProgressDialog.setProgress(values[0].intValue());
@@ -289,6 +313,7 @@ public class ViewActivity extends FragmentActivity {
 	}
 	
 	private void corralFailed(File cachefile){
+		cachefile.delete();
 		Log.e(TAG, "CorralFailed");
         runOnUiThread(new Runnable() {
             public void run() {
@@ -299,17 +324,9 @@ public class ViewActivity extends FragmentActivity {
 				.setCancelable(false)
 				.setPositiveButton(getResources().getString(R.string.cfailed_dialog_yes), new DialogInterface.OnClickListener() {
 					public void onClick(DialogInterface dialog, int whichButton) {
-						// TODO Download Later
-						showToast("Download will be started.", true);
 						finish();
 					}
-				})
-				.setNegativeButton(getResources().getString(R.string.cfailed_dialog_no),
-						new DialogInterface.OnClickListener() {
-							public void onClick(DialogInterface dialog, int whichButton) {
-								finish();
-							}
-						});
+				});
 				corralfailedDialog.create().show();
             }
         });

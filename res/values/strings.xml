@@ -50,8 +50,8 @@
     <string name="corral_dialog_no">No</string>
     
     <string name="cfailed_dialog_title">Failed To Download</string>
-    <string name="cfailed_dialog_text">Download it later from other phones in background?</string>
-    <string name="cfailed_dialog_yes">Yes</string>
+    <string name="cfailed_dialog_text">Please request sender to resend the file or check network state availability.</string>
+    <string name="cfailed_dialog_yes">OK</string>
     <string name="cfailed_dialog_no">No</string>
     
     <string name="appnotfound_dialog_title">Application Not Found</string>
@@ -69,10 +69,16 @@
     <string name="refresh_dialog_yes">Yes</string>
     <string name="refresh_dialog_no">No</string>
     
+    <string name="dlfm_dialog_title">File Manager App Not Found</string>
+    <string name="dlfm_dialog_text">File manager application is required to share files.\nDownload from Market now?</string>
+    <string name="dlfm_dialog_yes">Yes</string>
+    <string name="dlfm_dialog_no">No</string>
+    
     
     <!-- Others -->
     <string name="home_loading">Loading...</string>
     <string name="view_downloading">Downloading...</string>
+    <string name="post_sending">Encrypting and sending data...</string>
     <string name="title">Title</string>
     <string name="comment">Comment</string>
     <string name="empty"></string>

@@ -29,8 +29,9 @@ public class SampleActivity extends FragmentActivity {
 		actionBar.setDisplayUseLogoEnabled(false);
 		
 		TextView msg = (TextView) findViewById(R.id.message);
-		msg.setText(String.valueOf(mManager.getMusubi()));
-
+		msg.setText("Please launch on Musubi to view / post files.");
+		
+		goMusubi();
     }
 
 	@Override
@@ -63,7 +64,7 @@ public class SampleActivity extends FragmentActivity {
 				.setTitle(R.string.musubi_dialog_title)
 				.setMessage(R.string.musubi_dialog_text)
 				.setIcon(android.R.drawable.ic_dialog_info)
-				.setCancelable(true)
+				.setCancelable(false)
 				.setPositiveButton(getResources().getString(R.string.musubi_dialog_yes), new DialogInterface.OnClickListener() {
 					public void onClick(DialogInterface dialog, int whichButton) {
 						try {
@@ -74,6 +75,7 @@ public class SampleActivity extends FragmentActivity {
 			                startActivity(intent);
 			                finish();
 						} catch (Exception e) {
+			                finish();
 //							goMarket();
 						}
 					}
@@ -81,7 +83,7 @@ public class SampleActivity extends FragmentActivity {
 				.setNegativeButton(getResources().getString(R.string.musubi_dialog_no),
 						new DialogInterface.OnClickListener() {
 							public void onClick(DialogInterface dialog, int whichButton) {
-//								finish();
+								finish();
 							}
 						});
 		musubiDialog.create().show();

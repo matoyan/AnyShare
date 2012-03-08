@@ -106,7 +106,7 @@ public class DBHelper extends SQLiteOpenHelper {
         // enable locking so we can safely share 
         // this instance around
         db.setLockingEnabled(true);
-        Log.w(TAG, "dbhelper onopen");
+//        Log.w(TAG, "dbhelper onopen");
     }
 
 	/**
@@ -294,9 +294,9 @@ public class DBHelper extends SQLiteOpenHelper {
         if (raw != null) {
         	cv.put(ItemObject.RAW, raw);
         }
-        Log.e(TAG, cv.toString());
+//        Log.d(TAG, cv.toString());
 
-        long newObjId = getWritableDatabase().insertOrThrow(ItemObject.TABLE, null, cv);
+        getWritableDatabase().insertOrThrow(ItemObject.TABLE, null, cv);
 
         return objId;
     }
@@ -510,7 +510,6 @@ public class DBHelper extends SQLiteOpenHelper {
                 null, null, sortOrder, limits);
 		if (c != null && c.moveToFirst()) {
 			thumb = c.getBlob(0);
-			Log.e(TAG,"thumb found!"+thumb.length);
 		}
 		c.close();
 		return thumb;

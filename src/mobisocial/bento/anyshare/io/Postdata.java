@@ -3,17 +3,17 @@ package mobisocial.bento.anyshare.io;
 public class Postdata {
 	public String title;
 	public String text;
-	public String datatype;
+	public String datatype; // text, link or stream
 	public String mimetype;
 	public String uri;
 	public String localUri; // for file
 	public String timestamp;
-	public int filesize;
-	public byte[] thumb;  // image thumbnail
-	public byte[] attach; // other raw data (file itself)
 	public String comment;
+	public int filesize;
+	public String key;      // preshared key to decrypt data
+
 	public String objtype;
-	
+
 	// for corral initial try
 	public String lanip;
 //	public String lanport;
