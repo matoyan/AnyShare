@@ -17,7 +17,7 @@ To try out the application, please download [Action Bar Sherlock][1] as the acti
 Developed By
 ============
 
-Kazumine Matoba - <matoyan@gmail.com>
+Kazumine Matoba - https://twitter.com/matoyan
 
 
 
